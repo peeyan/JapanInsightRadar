@@ -122,13 +122,29 @@ app.post('/api/fetch-and-analyze', async (req, res) => {
   }
 });
 
-// ✨ Cron Jobの設定: 毎時0分に自動実行
-cron.schedule('0 */2 * * *', () => {
-  console.log('⏰ Scheduled task triggered: Fetching latest global intelligence...');
-  runFetchPipeline();
+// ✨ Vercelの定期実行(Cron)はGETリクエストで来るため、GETも許可する
+app.get('/api/fetch-and-analyze', async (req, res) => {
+  try {
+    const result = await runFetchPipeline();
+    res.status(200).json({ message: 'Pipeline completed manually', added: result.added });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to execute pipeline' });
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend server is running on http://localhost:${PORT}`);
-  console.log('⏰ Cron job activated: Automatic news fetch will run every 2 hour at minute 0.');
-});
+// --- ✨ Vercel / ローカル 実行の切り分け ---
+if (process.env.NODE_ENV !== 'production') {
+  // ローカル環境の場合のみ、サーバーを常駐させてCronを回す
+  cron.schedule('0 */2 * * *', () => {
+    console.log('⏰ Scheduled task triggered: Fetching latest global intelligence...');
+    runFetchPipeline();
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Backend server is running on http://localhost:${PORT}`);
+    console.log('⏰ Cron job activated: Automatic news fetch will run every 2 hours.');
+  });
+}
+
+// ✨ Vercel Serverless Functions 用にアプリをエクスポートする
+export default app;

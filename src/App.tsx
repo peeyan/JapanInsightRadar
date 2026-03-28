@@ -23,7 +23,7 @@ function App() {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/articles');
+        const response = await axios.get('/api/articles');
         setArticles(response.data);
       } catch (error) {
         console.error("Failed to fetch articles:", error);
