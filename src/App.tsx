@@ -10,6 +10,7 @@ import { DetailModal } from './components/DetailModal';
 function App() {
   const [isRumorMode, setIsRumorMode] = useState(false);
   const [isJapanMode, setIsJapanMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
@@ -35,10 +36,22 @@ function App() {
   const targetScope = isJapanMode ? 'Japan' : 'World';
   const scopedArticles = articles.filter(a => a.scope === targetScope || (!a.scope && targetScope === 'World'));
 
+  // ✨ 検索キーワードでフィルター
+  const filteredArticles = scopedArticles.filter(a => {
+    if (!searchQuery) return true; // 検索窓が空なら全て表示
+    const lowerQuery = searchQuery.toLowerCase();
+    return (
+      (a.title_raw && a.title_raw.toLowerCase().includes(lowerQuery)) ||
+      (a.content_fact && a.content_fact.toLowerCase().includes(lowerQuery)) ||
+      (a.content_rumor && a.content_rumor.toLowerCase().includes(lowerQuery)) ||
+      (a.category_minor && a.category_minor.toLowerCase().includes(lowerQuery))
+    );
+  });
+
   // カテゴリごとにデータをフィルタリング
-  const economyArticles = scopedArticles.filter(a => a.category_major === 'Economy');
-  const politicsArticles = scopedArticles.filter(a => a.category_major === 'Politics');
-  const techArticles = scopedArticles.filter(a => a.category_major === 'Technology');
+  const economyArticles = filteredArticles.filter(a => a.category_major === 'Economy');
+  const politicsArticles = filteredArticles.filter(a => a.category_major === 'Politics');
+  const techArticles = filteredArticles.filter(a => a.category_major === 'Technology');
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-8 max-w-7xl mx-auto flex flex-col">
@@ -47,6 +60,8 @@ function App() {
         setIsRumorMode={setIsRumorMode}
         isJapanMode={isJapanMode}
         setIsJapanMode={setIsJapanMode}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-grow">
         <CategoryColumn

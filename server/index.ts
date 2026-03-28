@@ -5,6 +5,7 @@ import pool from './db';
 import { analyzeNews } from './gemini';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 // --- API 1: 記事一覧の取得 (フロントエンドから呼ばれる) ---
 app.get('/api/articles', async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM articles ORDER BY published_at DESC LIMIT 50');
+    const [rows] = await pool.execute('SELECT * FROM articles ORDER BY published_at DESC LIMIT 200');
     res.status(200).json(rows);
   } catch (error) {
     console.error('Fetch Articles Error:', error);
@@ -26,7 +27,7 @@ app.get('/api/articles', async (req, res) => {
 });
 
 // --- API 2: ニュースの巡回・分析・保存 (手動実行 or バッチ処理用) ---
-app.post('/api/fetch-and-analyze', async (req, res) => {
+async function runFetchPipeline() {
   try {
     console.log("Fetching news from API...");
 
@@ -70,24 +71,19 @@ app.post('/api/fetch-and-analyze', async (req, res) => {
 
     // 全てのレスポンスから記事データだけを抽出して1つの配列に合体
     const articles = responses.flatMap(response => response.data.articles);
-    const results: any[] = [];
+    let addedCount = 0;
 
     for (const article of articles) {
       if (!article.title || !article.content) continue;
 
-      // 重複チェック
       const [existing]: any = await pool.execute('SELECT id FROM articles WHERE source_url = ?', [article.url]);
-      if (existing.length > 0) {
-        console.log(`Skipped (Already exists): ${article.title}`);
-        continue;
-      }
+      if (existing.length > 0) continue; // 重複は静かにスキップ
 
-      console.log(`Analyzing: ${article.title}`);
+      console.log(`🧠 Analyzing: ${article.title}`);
 
       try {
         const analyzedData = await analyzeNews(article.title, article.content || article.description);
         const publishedAt = new Date(article.publishedAt).toISOString().slice(0, 19).replace('T', ' ');
-
         await pool.execute(`
           INSERT INTO articles (
             id, scope, category_major, category_minor, title_raw, content_fact, content_rumor,
@@ -100,8 +96,7 @@ app.post('/api/fetch-and-analyze', async (req, res) => {
           analyzedData.scenario_opt, analyzedData.scenario_pess, article.url, publishedAt
         ]);
 
-        results.push(analyzedData);
-
+        addedCount++;
         // 7秒待機 (API制限対策)
         await new Promise(resolve => setTimeout(resolve, 7000));
 
@@ -109,14 +104,31 @@ app.post('/api/fetch-and-analyze', async (req, res) => {
         console.error(`Failed to analyze article: ${article.title}`, err);
       }
     }
-
-    res.status(200).json({ message: 'Pipeline completed', added: results.length });
+    console.log(`✅ Pipeline completed. Added ${addedCount} new articles.`);
+    return { added: addedCount };
   } catch (error) {
     console.error('Pipeline Error:', error);
+    throw error;
+  }
+}
+
+// --- API 2: 手動トリガー用エンドポイント ---
+app.post('/api/fetch-and-analyze', async (req, res) => {
+  try {
+    const result = await runFetchPipeline();
+    res.status(200).json({ message: 'Pipeline completed manually', added: result.added });
+  } catch (error) {
     res.status(500).json({ error: 'Failed to execute pipeline' });
   }
 });
 
+// ✨ Cron Jobの設定: 毎時0分に自動実行
+cron.schedule('0 */2 * * *', () => {
+  console.log('⏰ Scheduled task triggered: Fetching latest global intelligence...');
+  runFetchPipeline();
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server is running on http://localhost:${PORT}`);
+  console.log('⏰ Cron job activated: Automatic news fetch will run every 2 hour at minute 0.');
 });
