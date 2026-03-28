@@ -31,34 +31,34 @@ function App() {
   }, []);
 
   // カテゴリごとにデータをフィルタリング
-  const economyArticles = articles.filter(a => a.category_major === 'Economy');
-  const politicsArticles = articles.filter(a => a.category_major === 'Politics');
-  const techArticles = articles.filter(a => a.category_major === 'Technology');
+  const economyArticles = articles.filter(a => a.category_major === '経　済');
+  const politicsArticles = articles.filter(a => a.category_major === '政　治');
+  const techArticles = articles.filter(a => a.category_major === '技　術');
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-8 max-w-7xl mx-auto flex flex-col">
       <Header isRumorMode={isRumorMode} setIsRumorMode={setIsRumorMode} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-grow">
-        <CategoryColumn 
-          title="Economy" 
-          Icon={TrendingUp} 
-          articles={economyArticles} 
-          isRumorMode={isRumorMode} 
-          onArticleClick={setSelectedArticle} 
+        <CategoryColumn
+          title="経　済"
+          Icon={TrendingUp}
+          articles={economyArticles}
+          isRumorMode={isRumorMode}
+          onArticleClick={setSelectedArticle}
         />
-        <CategoryColumn 
-          title="Politics" 
-          Icon={Landmark} 
-          articles={politicsArticles} 
-          isRumorMode={isRumorMode} 
-          onArticleClick={setSelectedArticle} 
+        <CategoryColumn
+          title="政　治"
+          Icon={Landmark}
+          articles={politicsArticles}
+          isRumorMode={isRumorMode}
+          onArticleClick={setSelectedArticle}
         />
-        <CategoryColumn 
-          title="Technology" 
-          Icon={Cpu} 
-          articles={techArticles} 
-          isRumorMode={isRumorMode} 
+        <CategoryColumn
+          title="技　術"
+          Icon={Cpu}
+          articles={techArticles}
+          isRumorMode={isRumorMode}
           onArticleClick={setSelectedArticle}
         />
       </div>

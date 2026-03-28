@@ -8,7 +8,7 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article, isRumorMode, onClick }: ArticleCardProps) {
   return (
-    <div 
+    <div
       onClick={() => onClick(article)}
       className={`p-5 rounded-xl cursor-pointer transition-all duration-300 transform hover:-translate-y-1 bg-bgSecondary ${isRumorMode ? 'rumor-glow' : 'shadow-md hover:shadow-lg border border-slate-200'}`}
     >

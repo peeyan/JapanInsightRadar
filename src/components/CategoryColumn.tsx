@@ -19,11 +19,11 @@ export function CategoryColumn({ title, Icon, articles, isRumorMode, onArticleCl
       <div className="flex flex-col gap-5">
         {articles.length > 0 ? (
           articles.map((article) => (
-            <ArticleCard 
-              key={article.id} 
-              article={article} 
-              isRumorMode={isRumorMode} 
-              onClick={onArticleClick} 
+            <ArticleCard
+              key={article.id}
+              article={article}
+              isRumorMode={isRumorMode}
+              onClick={onArticleClick}
             />
           ))
         ) : (

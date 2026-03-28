@@ -20,9 +20,9 @@ export function DetailModal({ article, isRumorMode, onClose }: DetailModalProps)
             <Percent className="w-4 h-4" /> Truth Score: {article.truth_score}%
           </div>
         </div>
-        
+
         <h2 className="text-2xl font-bold mb-6">{article.title_raw}</h2>
-        
+
         <div className="mb-8">
           <h4 className="text-sm font-bold text-textSecondary mb-2 flex items-center gap-2">
             {isRumorMode ? <Skull className="w-4 h-4"/> : <Globe className="w-4 h-4"/>} 
@@ -50,7 +50,7 @@ export function DetailModal({ article, isRumorMode, onClose }: DetailModalProps)
         </div>
 
         <div className="mt-8 text-center">
-          <button 
+          <button
             onClick={onClose}
             className="px-6 py-2 rounded-full bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors font-bold text-sm"
           >
