@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-import pool from './db';
-import { analyzeNews } from './gemini';
+import pool from './db.js';
+import { analyzeNews } from './gemini.js';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import cron from 'node-cron';
