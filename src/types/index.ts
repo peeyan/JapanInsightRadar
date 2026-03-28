@@ -1,5 +1,6 @@
 export interface Article {
   id: string;
+  scope: string;
   category_major: string;
   category_minor: string;
   title_raw: string;

@@ -28,18 +28,54 @@ app.get('/api/articles', async (req, res) => {
 // --- API 2: ニュースの巡回・分析・保存 (手動実行 or バッチ処理用) ---
 app.post('/api/fetch-and-analyze', async (req, res) => {
   try {
-    // 1. News APIからTopニュースを取得（今回は general カテゴリ）
-    const newsResponse = await axios.get(`https://newsapi.org/v2/top-headlines`, {
-      params: { category: 'general', language: 'en', pageSize: 5, apiKey: process.env.NEWS_API_KEY }
-    });
+    console.log("Fetching news from API...");
 
-    const articles = newsResponse.data.articles;
-    const results:any[] = [];
+    // 日本に関するキーワードのリスト
+    const japanKeywords = [
+      'Japan economy',       // 日本の経済
+      'Japan politics',      // 日本の政治・政界
+      'Tokyo',               // 東京
+      'Bank of Japan',       // 日銀
+      'Japan technology',    // 日本の技術
+      'Japan diplomacy',     // 日本の外交
+      'Japan social issues', // 日本の社会問題
+      'Japan defense',       // 日本の防衛
+      'Japanese companies'   // 日本の企業
+    ];
+
+    // リストからランダムに「3つ」選ぶ（シャッフルして最初の3つを取る）
+    const shuffledKeywords = japanKeywords.sort(() => 0.5 - Math.random());
+    const selectedKeywords = shuffledKeywords.slice(0, 3);
+
+    console.log(`Target Japan Keywords: ${selectedKeywords.join(', ')}`);
+
+    // 世界ニュースのAPIリクエスト（10件）
+    const apiRequests = [
+      axios.get(`https://newsapi.org/v2/top-headlines`, {
+        params: { category: 'general', language: 'en', pageSize:10, apiKey: process.env.NEWS_API_KEY }
+      })
+    ];
+
+    // 選んだ3つのキーワードごとに、日本ニュースのAPIリクエストを追加（各5件）
+    for (const keyword of selectedKeywords) {
+      apiRequests.push(
+        axios.get(`https://newsapi.org/v2/everything`, {
+          params: { q: keyword, language: 'en', sortBy: 'publishedAt', pageSize: 5, apiKey: process.env.NEWS_API_KEY }
+        })
+      );
+    }
+
+    // 全部のリクエスト（世界1 + 日本3 = 計4リクエスト）を同時に実行
+    const responses = await Promise.all(apiRequests);
+
+    // 全てのレスポンスから記事データだけを抽出して1つの配列に合体
+    const articles = responses.flatMap(response => response.data.articles);
+    const results: any[] = [];
 
     for (const article of articles) {
       if (!article.title || !article.content) continue;
 
-      // 重複チェック: すでに同じURLの記事がDBにあるか確認
+      // 重複チェック
       const [existing]: any = await pool.execute('SELECT id FROM articles WHERE source_url = ?', [article.url]);
       if (existing.length > 0) {
         console.log(`Skipped (Already exists): ${article.title}`);
@@ -48,24 +84,30 @@ app.post('/api/fetch-and-analyze', async (req, res) => {
 
       console.log(`Analyzing: ${article.title}`);
 
-      // 2. Gemini APIで分析
-      const analyzedData = await analyzeNews(article.title, article.content || article.description);
+      try {
+        const analyzedData = await analyzeNews(article.title, article.content || article.description);
+        const publishedAt = new Date(article.publishedAt).toISOString().slice(0, 19).replace('T', ' ');
 
-      // 3. TiDBに保存
-      const publishedAt = new Date(article.publishedAt).toISOString().slice(0, 19).replace('T', ' ');
-      await pool.execute(`
-        INSERT INTO articles (
-          id, category_major, category_minor, title_raw, content_fact, content_rumor,
-          history_rhyme, truth_score, scenario_opt, scenario_pess, source_url, published_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        uuidv4(), analyzedData.category_major, analyzedData.category_minor,
-        analyzedData.title_raw || article.title, analyzedData.content_fact,
-        analyzedData.content_rumor, analyzedData.history_rhyme, analyzedData.truth_score,
-        analyzedData.scenario_opt, analyzedData.scenario_pess, article.url, publishedAt
-      ]);
+        await pool.execute(`
+          INSERT INTO articles (
+            id, scope, category_major, category_minor, title_raw, content_fact, content_rumor,
+            history_rhyme, truth_score, scenario_opt, scenario_pess, source_url, published_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          uuidv4(), analyzedData.scope || 'World', analyzedData.category_major, analyzedData.category_minor,
+          analyzedData.title_raw || article.title, analyzedData.content_fact,
+          analyzedData.content_rumor, analyzedData.history_rhyme, analyzedData.truth_score,
+          analyzedData.scenario_opt, analyzedData.scenario_pess, article.url, publishedAt
+        ]);
 
-      results.push(analyzedData);
+        results.push(analyzedData);
+
+        // 7秒待機 (API制限対策)
+        await new Promise(resolve => setTimeout(resolve, 7000));
+
+      } catch (err) {
+        console.error(`Failed to analyze article: ${article.title}`, err);
+      }
     }
 
     res.status(200).json({ message: 'Pipeline completed', added: results.length });

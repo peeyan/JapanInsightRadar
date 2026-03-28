@@ -19,6 +19,7 @@ export async function analyzeNews(title: string, content: string) {
 
 【出力JSONスキーマ】
 {
+  "scope": "World または Japan のいずれか（記事が日本に関するものであればJapan、それ以外はWorld）",
   "category_major": "Economy, Politics, Technology のいずれか",
   "category_minor": "記事に最も適合するサブカテゴリ名",
   "title_raw": "元の英語ニュースのタイトル",
@@ -42,8 +43,7 @@ Content: ${content}
 
   try {
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const text = result.response.text();
     return JSON.parse(text);
   } catch (error) {
     console.error('Gemini API Error:', error);

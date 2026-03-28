@@ -9,6 +9,7 @@ import { DetailModal } from './components/DetailModal';
 
 function App() {
   const [isRumorMode, setIsRumorMode] = useState(false);
+  const [isJapanMode, setIsJapanMode] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
@@ -30,15 +31,23 @@ function App() {
     fetchArticles();
   }, []);
 
+  // ✨ まず「World」か「Japan」かでフィルター
+  const targetScope = isJapanMode ? 'Japan' : 'World';
+  const scopedArticles = articles.filter(a => a.scope === targetScope || (!a.scope && targetScope === 'World'));
+
   // カテゴリごとにデータをフィルタリング
-  const economyArticles = articles.filter(a => a.category_major === '経　済');
-  const politicsArticles = articles.filter(a => a.category_major === '政　治');
-  const techArticles = articles.filter(a => a.category_major === '技　術');
+  const economyArticles = scopedArticles.filter(a => a.category_major === 'Economy');
+  const politicsArticles = scopedArticles.filter(a => a.category_major === 'Politics');
+  const techArticles = scopedArticles.filter(a => a.category_major === 'Technology');
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-8 max-w-7xl mx-auto flex flex-col">
-      <Header isRumorMode={isRumorMode} setIsRumorMode={setIsRumorMode} />
-
+      <Header
+        isRumorMode={isRumorMode}
+        setIsRumorMode={setIsRumorMode}
+        isJapanMode={isJapanMode}
+        setIsJapanMode={setIsJapanMode}
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-grow">
         <CategoryColumn
           title="経　済"
