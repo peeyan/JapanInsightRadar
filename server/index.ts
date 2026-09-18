@@ -77,7 +77,7 @@ async function runFetchPipeline() {
       if (!article.title || !article.content) continue;
 
       const [existing]: any = await pool.execute('SELECT id FROM articles WHERE source_url = ?', [article.url]);
-      if (existing.length > 0) continue; // 重複は静かにスキップ
+      if (existing.length > 0) continue; // 重複はスキップ
 
       console.log(`🧠 Analyzing: ${article.title}`);
 
